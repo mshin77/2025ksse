@@ -1,0 +1,27 @@
+Case,Session,Phase ,Outcome
+1,1,Baseline1,20
+1,2,Baseline1,20
+1,3,Baseline1,0
+1,4,Baseline1.Predict,10
+1,5,Baseline1.Predict,5
+1,6,Baseline1.Predict,5
+1,7,Baseline1.Predict,4
+1,8,Baseline1.Predict,4
+1,4,Intervention1,40
+1,5,Intervention1,60
+1,6,Intervention1,40
+1,7,Intervention1,60
+1,8,Intervention1,65
+1,9,Intervention1.Predict,70
+1,10,Intervention1.Predict,65
+1,11,Intervention1.Predict,70
+1,12,Intervention1.Predict,75
+1,9,Baseline2,20
+1,10,Baseline2,30
+1,11,Baseline2,20
+1,12,Baseline2,18
+1,13,Intervention2,80
+1,14,Intervention2,90
+1,15,Intervention2,85
+1,16,Intervention2,85
+1,17,Intervention2,90

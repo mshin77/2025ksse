@@ -1,0 +1,512 @@
+set1_colors <- brewer.pal(8, "Set1")
+paired_colors <- brewer.pal(8, "Paired")
+dark2_colors <- brewer.pal(8, "Dark2")
+all_colors <- unique(c(set1_colors, paired_colors, dark2_colors))
+palette <- colorRampPalette(all_colors)(n_communities)
+}
+community_colors <- setNames(palette, as.character(seq_len(n_communities)))
+nodes$color <- community_colors[as.character(nodes$group)]
+legend_labels <- lapply(seq_len(n_communities), function(i) {
+list(label = paste0("Community ", i, "    "), color = community_colors[as.character(i)], shape = "dot")
+})
+plot <- visNetwork(nodes, edges) %>%
+visNodes(font = list(color = "black", size = node_label, vadjust = -90)) %>%
+visOptions(
+highlightNearest = list(
+enabled = TRUE,
+degree = 1,
+hover = TRUE
+),
+nodesIdSelection = if(show_node_selection) list(
+enabled = TRUE,
+style = "width: 200px; height: 26px;",
+main = "Select Node",
+values = nodes$id
+) else FALSE,
+manipulation = FALSE,
+selectedBy = if(show_community_selection) "group" else NULL
+) %>%
+visPhysics(
+solver = "barnesHut",
+barnesHut = list(
+gravitationalConstant = -1500,
+centralGravity = 0.4,
+springLength = 100,
+springConstant = 0.05,
+avoidOverlap = 0.3
+),
+stabilization = list(enabled = TRUE, iterations = 1000)
+) %>%
+{if (showlegend) visLegend(.,
+addNodes = do.call(rbind, lapply(legend_labels, as.data.frame)),
+useGroups = FALSE,
+position = "right",
+width = 0.2,
+zoom = FALSE,
+ncol = 1,
+stepY = 50
+) else .} %>%
+visLayout(randomSeed = ifelse(is.null(seed), 2025, seed))
+return(list(plot = plot, nodes = nodes, edges = edges, graph = graph))
+}
+if (!is.null(doc_var) && length(docvar_levels) > 1) {
+plots_list <- dfm_td %>%
+dplyr::ungroup() %>%
+dplyr::group_by(!!rlang::sym(doc_var)) %>%
+dplyr::group_map(~ {
+group_level <- .y[[doc_var]]
+print(paste("Processing group level:", group_level))
+if (is.null(group_level)) {
+stop("doc_var is missing or not found in the current group")
+}
+net <- build_network_plot(.x, group_level)
+if (!is.null(net)) {
+net$vis %>% visNetwork::visLayout(
+annotations = list(
+list(
+text = group_level,
+x = 0.42,
+xanchor = "center",
+y = 0.98,
+yanchor = "bottom",
+yref = "paper",
+showarrow = FALSE,
+font = list(size = 19, color = "black", family = "Arial Black")
+)
+)
+)
+} else {
+NULL
+}
+})
+combined_plot <- plotly::subplot(plots_list, nrows = nrows, shareX = TRUE, shareY = TRUE,
+titleX = TRUE, titleY = TRUE)
+table_list <- lapply(docvar_levels, function(level) {
+print(paste("Generating table for level:", level))
+group_data <- dplyr::filter(dfm_td, !!rlang::sym(doc_var) == level)
+net <- build_network_plot(group_data)
+if (!is.null(net)) build_table(net, level) else NULL
+})
+summary_list <- lapply(docvar_levels, function(level) {
+print(paste("Generating summary for level:", level))
+group_data <- dplyr::filter(dfm_td, !!rlang::sym(doc_var) == level)
+net <- build_network_plot(group_data)
+if (!is.null(net)) build_summary(net, level) else NULL
+})
+return(list(
+plot = combined_plot,
+table = table_list %>% htmltools::tagList() %>% htmltools::browsable(),
+summary = summary_list %>% htmltools::tagList() %>% htmltools::browsable()
+))
+} else {
+net <- build_network_plot(dfm_td)
+if (is.null(net) || is.null(net$nodes) || is.null(net$edges) || is.null(net$graph)) {
+message("No network generated.")
+return(list(
+plot = NULL,
+table = NULL,
+summary = NULL
+))
+}
+return(list(
+plot = net$plot,
+table = if (!is.null(net$layout_df)) build_table(net,
+if (!is.null(doc_var)) paste("Network Centrality Table for", doc_var)
+else "Network Centrality Table") else NULL,
+summary = if (!is.null(net$layout_df)) build_summary(net,
+if (!is.null(doc_var)) paste("Network Summary for", doc_var)
+else "Network Summary") else NULL
+))
+}
+}
+word_network_results <- word_correlation_network(
+dfm_init_updated,
+doc_var = "",
+common_term_n = 3,
+corr_n = 0.4,
+top_node_n = 15,
+node_label = 30,
+nrows = 1,
+height = 900,
+width = 1500,
+pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
+showlegend = TRUE,
+seed = 2025,
+show_node_selection = TRUE,
+show_community_selection = FALSE
+)
+word_network_results$plot
+htmlwidgets::saveWidget(word_network_results$plot, file = "figures/word_network_plot.html", selfcontained = TRUE)
+word_network_results <- word_correlation_network(
+dfm_init_updated,
+doc_var = "",
+common_term_n = 3,
+corr_n = 0.4,
+top_node_n = 15,
+node_label = 30,
+nrows = 1,
+height = 900,
+width = 1500,
+pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
+showlegend = TRUE,
+seed = 2025,
+show_node_selection = TRUE,
+show_community_selection = FALSE
+)
+word_network_results$plot
+htmlwidgets::saveWidget(word_network_results$plot, file = "figures/word_network_plot.html", selfcontained = TRUE)
+suppressPackageStartupMessages({
+library(readxl)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(nlme)
+library(scdhlm)
+library(sjPlot)
+library(quanteda)
+library(TextAnalysisR)
+library(spacyr)
+library(stringr)
+library(widyr)
+library(tidygraph)
+library(visNetwork)
+library(RColorBrewer)
+})
+word_correlation_network <- function(dfm_object,
+doc_var = NULL,
+common_term_n = 130,
+corr_n = 0.4,
+top_node_n = 40,
+node_label = 50,
+nrows = 1,
+height = 1000,
+width = 900,
+pattern = NULL,
+showlegend = TRUE,
+seed = NULL) {
+dfm_td <- tidytext::tidy(dfm_object)
+docvars_df <- dfm_object@docvars
+docvars_df$document <- docvars_df$docname_
+dfm_td <- dplyr::left_join(dfm_td, docvars_df, by = "document")
+if (!is.null(doc_var) && doc_var != "" && !doc_var %in% colnames(dfm_td)) {
+message("Document-level metadata variable '", doc_var, "' was not selected or not found.")
+doc_var <- NULL
+}
+if (!is.null(doc_var) && doc_var %in% colnames(dfm_td)) {
+docvar_levels <- unique(dfm_td[[doc_var]])
+print(paste("doc_var has", length(docvar_levels), "levels:", paste(docvar_levels, collapse = ", ")))
+} else {
+docvar_levels <- NULL
+}
+build_table <- function(net, group_label) {
+layout_dff <- net$layout_df %>%
+dplyr::select(-c("x", "y")) %>%
+dplyr::mutate_if(is.numeric, round, digits = 3)
+table <- DT::datatable(layout_dff, rownames = FALSE,
+extensions = 'Buttons',
+options = list(scrollX = TRUE,
+width = "80%",
+dom = 'Bfrtip',
+buttons = c('copy', 'csv', 'excel', 'pdf', 'print'))) %>%
+DT::formatStyle(columns = colnames(layout_dff), `font-size` = "16px")
+htmltools::tagList(
+htmltools::tags$div(
+style = "margin-bottom: 20px;",
+htmltools::tags$p(
+group_label,
+style = "font-weight: bold; text-align: center; font-size: 14pt;"
+)
+),
+table
+)
+}
+build_summary <- function(net, group_label) {
+g <- net$graph
+summary_df <- data.frame(
+Metric = c("Nodes", "Edges", "Density", "Diameter",
+"Global Clustering Coefficient", "Local Clustering Coefficient (Mean)",
+"Modularity", "Assortativity", "Geodesic Distance (Mean)"),
+Value = c(
+igraph::vcount(g),
+igraph::ecount(g),
+igraph::edge_density(g),
+igraph::diameter(g),
+igraph::transitivity(g, type = "global"),
+mean(igraph::transitivity(g, type = "local"), na.rm = TRUE),
+igraph::modularity(g, membership = igraph::V(g)$community),
+igraph::assortativity_degree(g),
+mean(igraph::distances(g)[igraph::distances(g) != Inf], na.rm = TRUE)
+)
+) %>%
+dplyr::mutate_if(is.numeric, round, digits = 3)
+summary_table <- DT::datatable(summary_df, rownames = FALSE,
+extensions = 'Buttons',
+options = list(scrollX = TRUE,
+width = "80%",
+dom = 'Bfrtip',
+buttons = c('copy', 'csv', 'excel', 'pdf', 'print'))) %>%
+DT::formatStyle(columns = colnames(summary_df), `font-size` = "16px")
+htmltools::tagList(
+htmltools::tags$div(
+style = "margin-bottom: 20px;",
+htmltools::tags$p(
+group_label,
+style = "font-weight: bold; text-align: center; font-size: 14pt;"
+)
+),
+summary_table
+)
+}
+build_network_plot <- function(data, group_level = NULL) {
+if (!is.null(seed)) set.seed(seed)
+term_cor <- data %>%
+group_by(term) %>%
+filter(n() >= common_term_n) %>%
+widyr::pairwise_cor(term, document, sort = TRUE) %>%
+dplyr::ungroup() %>%
+dplyr::filter(correlation > corr_n)
+if (!is.null(pattern)) {
+term_cor <- term_cor %>%
+dplyr::filter(grepl(pattern, item1, ignore.case = TRUE) | grepl(pattern, item2, ignore.case = TRUE))
+}
+graph <- igraph::graph_from_data_frame(term_cor, directed = FALSE)
+if(igraph::vcount(graph) == 0) {
+message("No correlation relationships meet the threshold.")
+return(NULL)
+}
+igraph::V(graph)$degree      <- igraph::degree(graph)
+igraph::V(graph)$betweenness <- igraph::betweenness(graph)
+igraph::V(graph)$closeness   <- igraph::closeness(graph)
+igraph::V(graph)$eigenvector <- igraph::eigen_centrality(graph)$vector
+igraph::V(graph)$community   <- igraph::cluster_leiden(graph)$membership
+node_degrees <- igraph::degree(graph)
+sorted_indices <- order(node_degrees, decreasing = TRUE)
+top_n <- min(top_node_n, length(sorted_indices))
+top_nodes <- names(node_degrees)[sorted_indices[1:top_n]]
+nodes <- data.frame(
+id = igraph::V(graph)$name,
+label = ifelse(igraph::V(graph)$name %in% top_nodes, igraph::V(graph)$name, ""),
+group = igraph::V(graph)$community,
+value = igraph::V(graph)$degree,
+title = paste0(
+"<b style='color:black;'>", igraph::V(graph)$name, "</b><br>",
+"<span style='color:black;'>Degree: ", igraph::V(graph)$degree, "<br>",
+"Betweenness: ", round(igraph::V(graph)$betweenness, 2), "<br>",
+"Closeness: ", round(igraph::V(graph)$closeness, 2), "<br>",
+"Eigenvector: ", round(igraph::V(graph)$eigenvector, 2), "<br>",
+"Community: ", igraph::V(graph)$community, "</span>"
+)
+)
+edges <- igraph::as_data_frame(graph, what = "edges")
+edges$correlation <- term_cor$correlation[match(paste(edges$from, edges$to), paste(term_cor$item1, term_cor$item2))]
+edges$width <- scales::rescale(edges$correlation, to = c(1, 8))
+# Set edge color and alpha based on correlation
+edge_color_base <- "#5C5CFF"
+edges$color <- mapply(function(corr) {
+alpha_val <- scales::rescale(abs(corr), to = c(0.3, 1))
+scales::alpha(edge_color_base, alpha_val)
+}, edges$correlation)
+edges$title <- paste0(
+"<span style='color:black;'>Correlation: ", round(edges$correlation, 3),
+"<br>Source: ", edges$from,
+"<br>Target: ", edges$to, "</span>"
+)
+unique_communities <- sort(unique(nodes$group))
+community_map <- setNames(seq_along(unique_communities), unique_communities)
+nodes$group <- community_map[as.character(nodes$group)]
+n_communities <- length(unique(nodes$group))
+if (n_communities <= 8) {
+palette <- brewer.pal(n_communities, "Set2")
+} else {
+palette <- colorRampPalette(brewer.pal(8, "Set2"))(n_communities)
+}
+community_colors <- setNames(palette, as.character(seq_len(n_communities)))
+nodes$color <- community_colors[as.character(nodes$group)]
+legend_labels <- lapply(seq_len(n_communities), function(i) {
+list(label = paste0("Community ", i, " "), color = community_colors[as.character(i)], shape = "dot")
+})
+plot <- visNetwork(nodes, edges) %>%
+visNodes(font = list(color = "black", size = node_label, vadjust = -90)) %>%
+visOptions(
+highlightNearest = TRUE,
+nodesIdSelection = TRUE,
+manipulation = FALSE,
+selectedBy = list(
+variable = "group",
+multiple = FALSE,
+style = "width: 150px; height: 26px;"
+)
+) %>%
+visPhysics(
+solver = "barnesHut",
+barnesHut = list(
+gravitationalConstant = -1500,
+centralGravity = 0.4,
+springLength = 100,
+springConstant = 0.05,
+avoidOverlap = 0.3
+),
+stabilization = list(enabled = TRUE, iterations = 1000)
+) %>%
+{if (showlegend) visLegend(.,
+addNodes = do.call(rbind, lapply(legend_labels, as.data.frame)),
+useGroups = FALSE,
+position = "right",
+width = 0.2,
+zoom = FALSE
+) else .} %>%
+visLayout(randomSeed = ifelse(is.null(seed), 2025, seed))
+return(list(plot = plot, nodes = nodes, edges = edges, graph = graph))
+}
+if (!is.null(doc_var) && length(docvar_levels) > 1) {
+plots_list <- dfm_td %>%
+dplyr::ungroup() %>%
+dplyr::group_by(!!rlang::sym(doc_var)) %>%
+dplyr::group_map(~ {
+group_level <- .y[[doc_var]]
+print(paste("Processing group level:", group_level))
+if (is.null(group_level)) {
+stop("doc_var is missing or not found in the current group")
+}
+net <- build_network_plot(.x, group_level)
+if (!is.null(net)) {
+net$vis %>% visNetwork::visLayout(
+annotations = list(
+list(
+text = group_level,
+x = 0.42,
+xanchor = "center",
+y = 0.98,
+yanchor = "bottom",
+yref = "paper",
+showarrow = FALSE,
+font = list(size = 19, color = "black", family = "Arial Black")
+)
+)
+)
+} else {
+NULL
+}
+})
+combined_plot <- plotly::subplot(plots_list, nrows = nrows, shareX = TRUE, shareY = TRUE,
+titleX = TRUE, titleY = TRUE)
+table_list <- lapply(docvar_levels, function(level) {
+print(paste("Generating table for level:", level))
+group_data <- dplyr::filter(dfm_td, !!rlang::sym(doc_var) == level)
+net <- build_network_plot(group_data)
+if (!is.null(net)) build_table(net, level) else NULL
+})
+summary_list <- lapply(docvar_levels, function(level) {
+print(paste("Generating summary for level:", level))
+group_data <- dplyr::filter(dfm_td, !!rlang::sym(doc_var) == level)
+net <- build_network_plot(group_data)
+if (!is.null(net)) build_summary(net, level) else NULL
+})
+return(list(
+plot = combined_plot,
+table = table_list %>% htmltools::tagList() %>% htmltools::browsable(),
+summary = summary_list %>% htmltools::tagList() %>% htmltools::browsable()
+))
+} else {
+net <- build_network_plot(dfm_td)
+if (is.null(net) || is.null(net$nodes) || is.null(net$edges) || is.null(net$graph)) {
+message("No network generated.")
+return(list(
+plot = NULL,
+table = NULL,
+summary = NULL
+))
+}
+return(list(
+plot = net$plot,
+table = if (!is.null(net$layout_df)) build_table(net,
+if (!is.null(doc_var)) paste("Network Centrality Table for", doc_var)
+else "Network Centrality Table") else NULL,
+summary = if (!is.null(net$layout_df)) build_summary(net,
+if (!is.null(doc_var)) paste("Network Summary for", doc_var)
+else "Network Summary") else NULL
+))
+}
+}
+word_network_results <- word_correlation_network(
+dfm_init_updated,
+doc_var = "",
+common_term_n = 3,
+corr_n = 0.4,
+top_node_n = 15,
+node_label = 30,
+nrows = 1,
+height = 900,
+width = 1500,
+pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
+showlegend = TRUE,
+seed = 2025
+)
+word_network_results$plot
+htmlwidgets::saveWidget(word_network_results$plot, file = "figures/word_network_plot.html", selfcontained = TRUE)
+file_info <- data.frame(filepath = "data/wos.xlsx")
+df <- TextAnalysisR::process_files(dataset_choice = "Upload Your File",
+file_info = file_info)
+df <- df %>%
+filter(
+PY >= 2010 &
+(
+str_detect(AB, regex("learn.* disab.*", ignore_case = TRUE)) |
+str_detect(DE, regex("learn.* disab.*", ignore_case = TRUE)) |
+str_detect(TI, regex("learn.* disab.*", ignore_case = TRUE))
+)
+)
+united_tbl <- TextAnalysisR::unite_text_cols(df, listed_vars = c("AB", "DE", "TI"))
+tokens <- TextAnalysisR::preprocess_texts(united_tbl,
+text_field = "united_texts",
+min_char = 2,
+remove_punct = TRUE,
+remove_symbols = TRUE,
+remove_numbers = TRUE,
+remove_url = TRUE,
+remove_separators = TRUE,
+split_hyphens = TRUE,
+split_tags = TRUE,
+include_docvars = TRUE,
+keep_acronyms = FALSE,
+padding = FALSE,
+verbose = FALSE)
+custom_dict <- quanteda::dictionary(list(custom = c("learning disabilities", "single-case", "single-subject", "functional relation", "visual analysis")))
+toks_compound <- quanteda::tokens_compound(
+tokens,
+pattern = custom_dict,
+concatenator = "_",
+valuetype = "glob",
+window = 0,
+case_insensitive = TRUE,
+join = TRUE,
+keep_unigrams = FALSE,
+verbose = TRUE
+)
+dfm_object_init <- quanteda::dfm(toks_compound)
+stopwords <- stopwords::stopwords("en", source = "snowball")
+toks_removed <- quanteda::tokens_remove(toks_compound, pattern = stopwords, verbose = FALSE)
+dfm_init <- quanteda::dfm(toks_removed)
+common_words <- c("study", "students", "research", "results")
+toks_removed_common <- quanteda::tokens_remove(toks_removed, pattern = common_words, verbose = FALSE)
+dfm_init_updated <- quanteda::dfm(toks_removed_common)
+TextAnalysisR::plot_word_frequency(dfm_init_updated, n = 20)
+word_network_results <- word_correlation_network(
+dfm_init_updated,
+doc_var = "",
+common_term_n = 3,
+corr_n = 0.4,
+top_node_n = 15,
+node_label = 30,
+nrows = 1,
+height = 900,
+width = 1500,
+pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
+showlegend = TRUE,
+seed = 2025
+)
+word_network_results$plot
+htmlwidgets::saveWidget(word_network_results$plot, file = "figures/word_network_plot.html", selfcontained = TRUE)

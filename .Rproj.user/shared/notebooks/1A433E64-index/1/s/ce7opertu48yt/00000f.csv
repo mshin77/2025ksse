@@ -1,0 +1,19 @@
+"0","word_network_results <- word_correlation_network("
+"0","  dfm_init_updated,"
+"0","  doc_var = """","
+"0","  common_term_n = 3,"
+"0","  corr_n = 0.4,"
+"0","  top_node_n = 15,"
+"0","  node_label = 30,"
+"0","  nrows = 1,"
+"0","  height = 900,"
+"0","  width = 1500,"
+"0","  pattern = ""learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian"","
+"0","  showlegend = TRUE,"
+"0","  seed = 2025"
+"0",")"
+"2","G2;H2;Warningh in brewer.pal(n_communities, ""Set2"") :
+  minimal value for n is 3, returning requested palette with 3 different levels
+g
+"
+"0","word_network_results$plot  "

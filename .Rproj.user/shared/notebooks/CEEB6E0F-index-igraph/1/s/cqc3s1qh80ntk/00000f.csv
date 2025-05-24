@@ -1,0 +1,19 @@
+"0","united_tbl <- TextAnalysisR::unite_text_cols(df, listed_vars = c(""AB"", ""DE"", ""TI""))
+
+tokens <- TextAnalysisR::preprocess_texts(united_tbl,
+                                          text_field = ""united_texts"",
+                                          min_char = 2,
+                                          remove_punct = TRUE,
+                                          remove_symbols = TRUE,
+                                          remove_numbers = TRUE,
+                                          remove_url = TRUE,
+                                          remove_separators = TRUE,
+                                          split_hyphens = TRUE,
+                                          split_tags = TRUE,
+                                          include_docvars = TRUE,
+                                          keep_acronyms = FALSE,
+                                          padding = FALSE,
+                                          verbose = FALSE)
+"
+"2","G2;H2;Warningh: keep_acronyms argument is not used.g
+"

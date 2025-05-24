@@ -1,8 +1,0 @@
-"0","htmlwidgets::saveWidget(network_2009_earlier_table, file = ""figures/network_2009_earlier_table.html"", selfcontained = TRUE)
-"
-"2","G1;H1;Errorh in .getNamespace(pkg) : 
-  invalid type/length (symbol/0) in vector allocation
-g"
-"2","G1;H1;Error during wrapuph: not that many frames on the stack
-Error: no more error handlers available (recursive errors?); invoking 'abort' restart
-g"

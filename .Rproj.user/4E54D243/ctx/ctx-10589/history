@@ -1,117 +1,3 @@
-# TextAnalysisR::plot_word_frequency(dfm_2009_earlier, n = 20)
-word_network_2009_earlier <- word_correlation_network(
-dfm_2009_earlier,
-doc_var = NULL,
-common_term_n = 3,
-corr_n = 0.2,
-top_node_n = 25,
-node_label = 15,
-nrows = 1,
-height = 1500,
-width = 1500,
-pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
-showlegend = FALSE,
-seed = 2025
-)
-network_2009_earlier_plot <- word_network_2009_earlier$plot
-htmlwidgets::saveWidget(network_2009_earlier_plot, file = "figures/network_2009_earlier_plot.html", selfcontained = TRUE)
-network_2009_earlier_table <- word_network_2009_earlier$table
-network_2009_earlier_table
-df_2010_later <- df %>%
-filter(
-PY >= 2010 &
-(
-str_detect(AB, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(DE, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(TI, regex("learn.* disab.*", ignore_case = TRUE))
-)
-)
-united_tbl_2010_later <- TextAnalysisR::unite_text_cols(df_2010_later, listed_vars = c("AB", "DE", "TI"))
-tokens_2010_later <- TextAnalysisR::preprocess_texts(united_tbl_2010_later,
-text_field = "united_texts",
-min_char = 2,
-remove_punct = TRUE,
-remove_symbols = TRUE,
-remove_numbers = TRUE,
-remove_url = TRUE,
-remove_separators = TRUE,
-split_hyphens = TRUE,
-split_tags = TRUE,
-include_docvars = TRUE,
-keep_acronyms = FALSE,
-padding = FALSE,
-verbose = FALSE)
-custom_dict <- quanteda::dictionary(list(custom = c("learning disabilities", "single-case", "single-subject", "functional relation", "visual analysis")))
-toks_compound_2010_later <- quanteda::tokens_compound(
-tokens_2010_later,
-pattern = custom_dict,
-concatenator = "_",
-valuetype = "glob",
-window = 0,
-case_insensitive = TRUE,
-join = TRUE,
-keep_unigrams = FALSE,
-verbose = TRUE
-)
-dfm_object_init_2010_later <- quanteda::dfm(toks_compound_2010_later)
-stopwords <- stopwords::stopwords("en", source = "snowball")
-toks_removed_2010_later <- quanteda::tokens_remove(toks_compound_2010_later, pattern = stopwords, verbose = FALSE)
-dfm_init_2010_later <- quanteda::dfm(toks_removed_2010_later)
-common_words <- c("study", "students", "research", "results")
-toks_removed_common_2010_later <- quanteda::tokens_remove(toks_removed_2010_later, pattern = common_words, verbose = FALSE)
-dfm_2010_later <- quanteda::dfm(toks_removed_common_2010_later)
-# TextAnalysisR::plot_word_frequency(dfm_2010_later, n = 20)
-word_network_2010_later <- word_correlation_network(
-dfm_2010_later,
-doc_var = NULL,
-common_term_n = 3,
-corr_n = 0.27,
-top_node_n = 25,
-node_label = 30,
-nrows = 1,
-height = 1000,
-width = 1500,
-pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
-showlegend = FALSE,
-seed = 2025
-)
-network_2010_later_plot <- word_network_2010_later$plot
-htmlwidgets::saveWidget(network_2010_later_plot, file = "figures/network_2010_later_plot.html", selfcontained = TRUE)
-network_2010_later_table <- word_network_2010_later$table
-network_2010_later_table
-save(df, dfm_2009_earlier, dfm_2010_later, network_2009_earlier_plot, network_2009_earlier_table, network_2010_later_plot, network_2010_later_table, year_plotly, file = "data/2025ksse_data.RData")
-suppressPackageStartupMessages({
-library(readxl)
-library(readr)
-library(kableExtra)
-library(plotly)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(nlme)
-library(scdhlm)
-library(sjPlot)
-library(quanteda)
-library(TextAnalysisR)
-library(spacyr)
-library(stringr)
-library(widyr)
-library(tidygraph)
-library(visNetwork)
-library(RColorBrewer)
-library(htmltools)
-})
-# load("data/2025ksse_data.RData")
-wos <- read_excel("data/wos.xlsx")
-df <- wos %>% ffilter(
-PY >= 2010 &
-(
-str_detect(AB, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(DE, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(TI, regex("learn.* disab.*", ignore_case = TRUE))
-)
-)
-year_doc <- df %>%
 dplyr::select(PY, UT) %>%
 group_by(PY) %>%
 dplyr::summarize(publication_number = n())
@@ -143,334 +29,6 @@ size = 4,
 color = "#404040")
 year_plotly <- year_plot %>% plotly::ggplotly()
 year_plotly
-# 단어 네트워크 분석에 필요한 함수 정의
-word_correlation_network <- function(dfm_object,
-doc_var = NULL,
-common_term_n = 130,
-corr_n = 0.4,
-top_node_n = 40,
-node_label = 50,
-nrows = 1,
-height = 1000,
-width = 900,
-pattern = NULL,
-showlegend = TRUE,
-seed = NULL) {
-dfm_td <- tidytext::tidy(dfm_object)
-docvars_df <- dfm_object@docvars
-docvars_df$document <- docvars_df$docname_
-dfm_td <- dplyr::left_join(dfm_td, docvars_df, by = "document")
-if (!is.null(doc_var) && doc_var != "" && !doc_var %in% colnames(dfm_td)) {
-message("Document-level metadata variable '", doc_var, "' was not selected or not found.")
-doc_var <- NULL
-}
-if (!is.null(doc_var) && doc_var %in% colnames(dfm_td)) {
-docvar_levels <- unique(dfm_td[[doc_var]])
-print(paste("doc_var has", length(docvar_levels), "levels:", paste(docvar_levels, collapse = ", ")))
-} else {
-docvar_levels <- NULL
-}
-build_table <- function(net) {
-layout_dff <- net$layout_df %>% dplyr::mutate_if(is.numeric, round, digits = 3)
-DT::datatable(
-layout_dff,
-rownames   = FALSE,
-extensions = 'Buttons',
-options    = list(
-scrollX        = TRUE,
-width          = "80%",
-dom            = 'Bfrtip',
-pageLength     = 10,
-buttons        = "",
-pagingType     = "full",
-headerCallback = htmlwidgets::JS(
-"function(thead, data, start, end, display){",
-"  $(thead).find('th').css({",
-"    'font-size': '20px', ",
-"    'padding': '4px 8px'",
-"  });",
-"}"
-)
-)
-) %>%
-DT::formatStyle(
-columns   = colnames(layout_dff),
-fontSize  = "20px"
-) %>%
-htmltools::tagList()
-}
-build_network_plot <- function(data, group_level = NULL) {
-if (!is.null(seed)) set.seed(seed)
-term_cor <- data %>%
-group_by(term) %>%
-filter(n() >= common_term_n) %>%
-widyr::pairwise_cor(term, document, sort = TRUE) %>%
-dplyr::ungroup() %>%
-dplyr::filter(correlation > corr_n)
-if (!is.null(pattern)) {
-term_cor <- term_cor %>%
-dplyr::filter(grepl(pattern, item1, ignore.case = TRUE) | grepl(pattern, item2, ignore.case = TRUE))
-}
-graph <- igraph::graph_from_data_frame(term_cor, directed = FALSE)
-if(igraph::vcount(graph) == 0) {
-message("No correlation relationships meet the threshold.")
-return(NULL)
-}
-igraph::V(graph)$degree      <- igraph::degree(graph)
-igraph::V(graph)$eigenvector <- igraph::eigen_centrality(graph)$vector
-igraph::V(graph)$community   <- igraph::cluster_leiden(graph)$membership
-layout_df <- data.frame(
-단어 = igraph::V(graph)$name,
-연결 = igraph::V(graph)$degree,
-고유벡터 = igraph::V(graph)$eigenvector
-# 커뮤니티 = igraph::V(graph)$community
-)
-node_degrees <- igraph::degree(graph)
-sorted_indices <- order(node_degrees, decreasing = TRUE)
-top_n <- min(top_node_n, length(sorted_indices))
-top_nodes <- names(node_degrees)[sorted_indices[1:top_n]]
-nodes <- data.frame(
-id = igraph::V(graph)$name,
-label = ifelse(igraph::V(graph)$name %in% top_nodes, igraph::V(graph)$name, ""),
-group = igraph::V(graph)$community,
-value = igraph::V(graph)$degree,
-title = paste0(
-"<b style='color:black;'>", igraph::V(graph)$name, "</b><br>",
-"<span style='color:black;'>연결: ", igraph::V(graph)$degree, "<br>",
-"고유벡터: ", round(igraph::V(graph)$eigenvector, 2), "<br>",
-"커뮤니티: ", igraph::V(graph)$community, "</span>"
-)
-)
-edges <- igraph::as_data_frame(graph, what = "edges")
-edges$correlation <- term_cor$correlation[match(paste(edges$from, edges$to), paste(term_cor$item1, term_cor$item2))]
-edges$width <- scales::rescale(edges$correlation, to = c(1, 8))
-edge_color_base <- "#5C5CFF"
-edges$color <- mapply(function(corr) {
-alpha_val <- scales::rescale(abs(corr), to = c(0.3, 1))
-scales::alpha(edge_color_base, alpha_val)
-}, edges$correlation)
-edges$title <- paste0(
-"<span style='color:black;'>상관관계: ", round(edges$correlation, 3),
-"<br>출발점: ", edges$from,
-"<br>도착점: ", edges$to, "</span>"
-)
-unique_communities <- sort(unique(nodes$group))
-community_map <- setNames(seq_along(unique_communities), unique_communities)
-nodes$group <- community_map[as.character(nodes$group)]
-n_communities <- length(unique(nodes$group))
-if (n_communities <= 8) {
-palette <- brewer.pal(n_communities, "Set2")
-} else {
-palette <- colorRampPalette(brewer.pal(8, "Set2"))(n_communities)
-}
-community_colors <- setNames(palette, as.character(seq_len(n_communities)))
-nodes$color <- community_colors[as.character(nodes$group)]
-legend_labels <- lapply(seq_len(n_communities), function(i) {
-community_size <- sum(nodes$group == i)
-list(label = paste0("커뮤니티 ", i, " (", community_size, ") "), color = community_colors[as.character(i)], shape = "dot")
-})
-plot <- visNetwork(nodes, edges) %>%
-visNodes(font = list(color = "black", size = node_label, vadjust = -90)) %>%
-visOptions(
-highlightNearest = TRUE,
-nodesIdSelection = TRUE,
-manipulation = FALSE,
-selectedBy = list(
-variable = "group",
-multiple = FALSE,
-style = "width: 150px; height: 26px;"
-)
-) %>%
-visPhysics(
-solver = "barnesHut",
-barnesHut = list(
-gravitationalConstant = -1500,
-centralGravity = 0.4,
-springLength = 100,
-springConstant = 0.05,
-avoidOverlap = 0.3
-),
-stabilization = list(enabled = TRUE, iterations = 1000)
-) %>%
-{if (showlegend) visLegend(.,
-addNodes = do.call(rbind, lapply(legend_labels, as.data.frame)),
-useGroups = FALSE,
-position = "right",
-width = 0.2,
-zoom = FALSE
-) else .} %>%
-visLayout(randomSeed = ifelse(is.null(seed), 2025, seed))
-return(list(
-plot = plot,
-nodes = nodes,
-edges = edges,
-graph = graph,
-layout_df = layout_df
-))
-}
-if (!is.null(doc_var) && length(docvar_levels) > 1) {
-plots_list <- dfm_td %>%
-dplyr::ungroup() %>%
-dplyr::group_by(!!rlang::sym(doc_var)) %>%
-dplyr::group_map(~ {
-group_level <- .y[[doc_var]]
-print(paste("Processing group level:", group_level))
-if (is.null(group_level)) {
-stop("doc_var is missing or not found in the current group")
-}
-net <- build_network_plot(.x, group_level)
-if (!is.null(net)) {
-net$vis %>% visNetwork::visLayout(
-annotations = list(
-list(
-text = group_level,
-x = 0.42,
-xanchor = "center",
-y = 0.98,
-yanchor = "bottom",
-yref = "paper",
-showarrow = FALSE,
-font = list(size = 19, color = "black", family = "Arial Black")
-)
-)
-)
-} else {
-NULL
-}
-})
-combined_plot <- plotly::subplot(plots_list, nrows = nrows, shareX = TRUE, shareY = TRUE,
-titleX = TRUE, titleY = TRUE)
-table_list <- lapply(docvar_levels, function(level) {
-print(paste("Generating table for level:", level))
-group_data <- dplyr::filter(dfm_td, !!rlang::sym(doc_var) == level)
-net <- build_network_plot(group_data)
-if (!is.null(net)) build_table(net) else NULL
-})
-return(list(
-plot = combined_plot,
-table = table_list %>% htmltools::tagList() %>% htmltools::browsable()
-))
-} else {
-net <- build_network_plot(dfm_td)
-if (is.null(net)) {
-message("No network generated.")
-return(NULL)
-}
-return(list(
-plot = net$plot,
-table = build_table(net) %>% htmltools::browsable()
-))
-}
-}
-file_info <- data.frame(filepath = "data/wos.xlsx")
-wos <- TextAnalysisR::process_files(dataset_choice = "Upload Your File",
-file_info = file_info)
-df_2009_earlier <- wos %>%
-filter(
-PY <= 2009 &
-(
-str_detect(AB, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(DE, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(TI, regex("learn.* disab.*", ignore_case = TRUE))
-)
-)
-united_tbl_2009_earlier <- TextAnalysisR::unite_text_cols(df_2009_earlier, listed_vars = c("AB", "DE", "TI"))
-tokens_2009_earlier <- TextAnalysisR::preprocess_texts(united_tbl_2009_earlier,
-text_field = "united_texts",
-min_char = 2,
-remove_punct = TRUE,
-remove_symbols = TRUE,
-remove_numbers = TRUE,
-remove_url = TRUE,
-remove_separators = TRUE,
-split_hyphens = TRUE,
-split_tags = TRUE,
-include_docvars = TRUE,
-keep_acronyms = FALSE,
-padding = FALSE,
-verbose = FALSE)
-custom_dict <- quanteda::dictionary(list(custom = c("learning disabilities", "single-case", "single-subject", "functional relation", "visual analysis")))
-toks_compound_2009_earlier <- quanteda::tokens_compound(
-tokens_2009_earlier,
-pattern = custom_dict,
-concatenator = "_",
-valuetype = "glob",
-window = 0,
-case_insensitive = TRUE,
-join = TRUE,
-keep_unigrams = FALSE,
-verbose = TRUE
-)
-dfm_object_init_2009_earlier <- quanteda::dfm(toks_compound_2009_earlier)
-stopwords <- stopwords::stopwords("en", source = "snowball")
-toks_removed_2009_earlier <- quanteda::tokens_remove(toks_compound_2009_earlier, pattern = stopwords, verbose = FALSE)
-dfm_init_2009_earlier <- quanteda::dfm(toks_removed_2009_earlier)
-common_words <- c("study", "students", "research", "results")
-toks_removed_common_2009_earlier <- quanteda::tokens_remove(toks_removed_2009_earlier, pattern = common_words, verbose = FALSE)
-dfm_2009_earlier <- quanteda::dfm(toks_removed_common_2009_earlier)
-# TextAnalysisR::plot_word_frequency(dfm_2009_earlier, n = 20)
-word_network_2009_earlier <- word_correlation_network(
-dfm_2009_earlier,
-doc_var = NULL,
-common_term_n = 3,
-corr_n = 0.2,
-top_node_n = 25,
-node_label = 15,
-nrows = 1,
-height = 1500,
-width = 1500,
-pattern = "learn.*disab.*|single.*case|single.*subject|visual.*analy*|multi.*level|funtion.*relation|bayesian",
-showlegend = FALSE,
-seed = 2025
-)
-network_2009_earlier_plot <- word_network_2009_earlier$plot
-htmlwidgets::saveWidget(network_2009_earlier_plot, file = "figures/network_2009_earlier_plot.html", selfcontained = TRUE)
-network_2009_earlier_table <- word_network_2009_earlier$table
-network_2009_earlier_table
-df_2010_later <- df %>%
-filter(
-PY >= 2010 &
-(
-str_detect(AB, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(DE, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(TI, regex("learn.* disab.*", ignore_case = TRUE))
-)
-)
-united_tbl_2010_later <- TextAnalysisR::unite_text_cols(df_2010_later, listed_vars = c("AB", "DE", "TI"))
-tokens_2010_later <- TextAnalysisR::preprocess_texts(united_tbl_2010_later,
-text_field = "united_texts",
-min_char = 2,
-remove_punct = TRUE,
-remove_symbols = TRUE,
-remove_numbers = TRUE,
-remove_url = TRUE,
-remove_separators = TRUE,
-split_hyphens = TRUE,
-split_tags = TRUE,
-include_docvars = TRUE,
-keep_acronyms = FALSE,
-padding = FALSE,
-verbose = FALSE)
-custom_dict <- quanteda::dictionary(list(custom = c("learning disabilities", "single-case", "single-subject", "functional relation", "visual analysis")))
-toks_compound_2010_later <- quanteda::tokens_compound(
-tokens_2010_later,
-pattern = custom_dict,
-concatenator = "_",
-valuetype = "glob",
-window = 0,
-case_insensitive = TRUE,
-join = TRUE,
-keep_unigrams = FALSE,
-verbose = TRUE
-)
-dfm_object_init_2010_later <- quanteda::dfm(toks_compound_2010_later)
-stopwords <- stopwords::stopwords("en", source = "snowball")
-toks_removed_2010_later <- quanteda::tokens_remove(toks_compound_2010_later, pattern = stopwords, verbose = FALSE)
-dfm_init_2010_later <- quanteda::dfm(toks_removed_2010_later)
-common_words <- c("study", "students", "research", "results")
-toks_removed_common_2010_later <- quanteda::tokens_remove(toks_removed_2010_later, pattern = common_words, verbose = FALSE)
-dfm_2010_later <- quanteda::dfm(toks_removed_common_2010_later)
-# TextAnalysisR::plot_word_frequency(dfm_2010_later, n = 20)
 word_network_2010_later <- word_correlation_network(
 dfm_2010_later,
 doc_var = NULL,
@@ -486,10 +44,138 @@ showlegend = FALSE,
 seed = 2025
 )
 network_2010_later_plot <- word_network_2010_later$plot
-htmlwidgets::saveWidget(network_2010_later_plot, file = "figures/network_2010_later_plot.html", selfcontained = TRUE)
-network_2010_later_table <- word_network_2010_later$table
-network_2010_later_table
-save(df, dfm_2009_earlier, dfm_2010_later, network_2009_earlier_plot, network_2009_earlier_table, network_2010_later_plot, network_2010_later_table, year_plotly, file = "data/2025ksse_data.RData")
+htmlwidgets::saveWidget(network_2010_later_plot, file = "figures/network_2010_later.html", selfcontained = TRUE)
+suppressPackageStartupMessages({
+library(readxl)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(nlme)
+library(scdhlm)
+library(sjPlot)
+library(quanteda)
+library(TextAnalysisR)
+library(spacyr)
+library(stringr)
+library(widyr)
+library(tidygraph)
+library(visNetwork)
+library(RColorBrewer)
+library(htmltools)
+})
+load("data/2025ksse_data.RData")
+AB <- read_csv("data/ABAB.csv", show_col_types = FALSE)
+AB$Case <- paste0("학생 ", AB$Case, sep = "")
+AB.plot <-  AB %>%
+ggplot(aes(Session, Outcome)) +
+geom_line(data = subset(AB, AB$Phase == "Baseline1"), aes(linetype='1'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Baseline1.Predict"), aes(linetype='2'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Intervention1"), aes(linetype='1'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Intervention1.Predict"), aes(linetype='2'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Baseline2"), aes(linetype='1'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Intervention2"), aes(linetype='1'), linewidth = 0.5) +
+geom_point(size = 2.5) +
+theme_minimal(base_size = 13) +
+theme(
+plot.title = element_text(face = "bold", size = 15),
+legend.position ="top",
+panel.grid.major = element_line(colour = "grey95", linewidth = 0.2),
+panel.grid.minor = element_blank(),
+legend.text = element_text(size = 13),
+legend.title = element_text(size = 13),
+legend.title.align = 0.5,
+strip.text.x = element_text(color = "#3B3B3B", size = 13),
+axis.text.x = element_text(size = 13, color = "#3B3B3B"),
+axis.text.y = element_text(size = 13, color = "#3B3B3B"),
+axis.title = element_text(face = "bold", size = 13, color = "#3B3B3B")
+) +
+labs(
+x = "회기",
+y = "바람직한 행동(%)"
+) +
+guides(linetype="none") +
+geom_vline(aes(xintercept = 3.5), linetype = "longdash", linewidth = 0.3, color = "grey10") +
+geom_vline(aes(xintercept = 8.5), linetype = "longdash", linewidth = 0.3, color = "grey10") +
+geom_vline(aes(xintercept = 12.5), linetype = "longdash", linewidth = 0.3, color = "grey10") +
+annotate(geom = "text", x = 2, y = 95, label = "기초선", color = "#0000FF", fontface = 'bold', Size = 5.5) +
+annotate(geom = "text", x = 6, y = 95, label = "중재", color = "#0000FF", fontface = 'bold', Size = 5.5) +
+annotate(geom = "text", x = 10.5, y = 95, label = "기초선", color = "#0000FF", fontface = 'bold', Size = 5.5) +
+annotate(geom = "text", x = 15, y = 95, label = "중재", color = "#0000FF", fontface = 'bold', Size = 5.5) +
+annotate(geom = "text", x = 6, y = 25, label = "예측하기", color = 'red', fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 10.5, y = 5, label = "검증하기", color = 'red', fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 15, y = 75, label = "재현하기", color = 'red', fontface = 'bold', size = 5.5) +
+annotate("rect", xmin = 3.8, xmax = 8.3, ymin = 0, ymax = 20, alpha = .2) +
+annotate("rect", xmin = 8.8, xmax = 12.3, ymin = 60, ymax = 90, alpha = .2)
+AB_plot <- AB.plot %>% ggplotly() %>% layout(dragmode = "select", height=400)
+AB <- read_csv("data/ABAB.csv", show_col_types = FALSE)
+AB$Case <- paste0("학생 ", AB$Case, sep = "")
+AB.plot <-  AB %>%
+ggplot(aes(Session, Outcome)) +
+geom_line(data = subset(AB, AB$Phase == "Baseline1"), aes(linetype='1'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Baseline1.Predict"), aes(linetype='2'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Intervention1"), aes(linetype='1'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Intervention1.Predict"), aes(linetype='2'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Baseline2"), aes(linetype='1'), linewidth = 0.5) +
+geom_line(data = subset(AB, AB$Phase == "Intervention2"), aes(linetype='1'), linewidth = 0.5) +
+geom_point(size = 2.5) +
+theme_minimal(base_size = 13) +
+theme(
+plot.title = element_text(face = "bold", size = 15),
+legend.position ="top",
+panel.grid.major = element_line(colour = "grey95", linewidth = 0.2),
+panel.grid.minor = element_blank(),
+legend.text = element_text(size = 13),
+legend.title = element_text(size = 13, hjust = 0.5),
+strip.text.x = element_text(color = "#3B3B3B", size = 13),
+axis.text.x = element_text(size = 13, color = "#3B3B3B"),
+axis.text.y = element_text(size = 13, color = "#3B3B3B"),
+axis.title = element_text(face = "bold", size = 13, color = "#3B3B3B")
+) +
+labs(
+x = "회기",
+y = "바람직한 행동(%)"
+) +
+guides(linetype="none") +
+geom_vline(aes(xintercept = 3.5), linetype = "longdash", linewidth = 0.3, color = "grey10") +
+geom_vline(aes(xintercept = 8.5), linetype = "longdash", linewidth = 0.3, color = "grey10") +
+geom_vline(aes(xintercept = 12.5), linetype = "longdash", linewidth = 0.3, color = "grey10") +
+annotate(geom = "text", x = 2, y = 95, label = "기초선", color = "#0000FF", fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 6, y = 95, label = "중재", color = "#0000FF", fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 10.5, y = 95, label = "기초선", color = "#0000FF", fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 15, y = 95, label = "중재", color = "#0000FF", fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 6, y = 25, label = "예측하기", color = 'red', fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 10.5, y = 5, label = "검증하기", color = 'red', fontface = 'bold', size = 5.5) +
+annotate(geom = "text", x = 15, y = 75, label = "재현하기", color = 'red', fontface = 'bold', size = 5.5) +
+annotate("rect", xmin = 3.8, xmax = 8.3, ymin = 0, ymax = 20, alpha = .2) +
+annotate("rect", xmin = 8.8, xmax = 12.3, ymin = 60, ymax = 90, alpha = .2)
+AB_plot <- AB.plot %>% ggplotly(height = 400) %>% layout(dragmode = "select")
+save(AB_plot, df, dfm_2009_earlier, dfm_2010_later, network_2009_earlier_plot, network_2009_earlier_table, network_2010_later_plot, network_2010_later_table, year_plotly, file = "data/2025ksse_data.RData")
+# Set up
+load("data/2025ksse_data.RData")
+suppressPackageStartupMessages({
+library(readxl)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(nlme)
+library(scdhlm)
+library(sjPlot)
+library(quanteda)
+library(TextAnalysisR)
+library(spacyr)
+library(stringr)
+library(widyr)
+library(tidygraph)
+library(visNetwork)
+library(RColorBrewer)
+library(htmltools)
+})
 htmltools::tags$style(HTML("
 div.dataTables_info,
 div.dataTables_paginate,
@@ -502,11 +188,325 @@ flex-wrap: nowrap !important;
 white-space: nowrap !important;
 }
 "))
-df <- wos %>% ffilter(
-PY >= 2010 &
-(
-str_detect(AB, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(DE, regex("learn.* disab.*", ignore_case = TRUE)) |
-str_detect(TI, regex("learn.* disab.*", ignore_case = TRUE))
+year_plotly
+network_2009_earlier_table
+network_2010_later_table
+AB_plot
+save(AB_plot, df, dfm_2009_earlier, dfm_2010_later, network_2009_earlier_plot, network_2009_earlier_table, network_2010_later_plot, network_2010_later_table, year_plotly, file = "data/2025ksse_data.RData")
+df <- read_excel("data/wos.xlsx")
+setwd("C:/Users/shinm/Dropbox/Myself/conference/KSSE/2025/2025ksse/docs")
+df <- read_excel("data/wos.xlsx")
+df <- read_excel("data/wos.xlsx")
+df <- read_excel("data/wos.xlsx")
+year_doc <- df %>%
+dplyr::select(PY, UT) %>%
+group_by(PY) %>%
+dplyr::summarize(publication_number = n())
+year_plot <- year_doc %>%
+ggplot() +
+geom_col(aes(PY, publication_number), fill = "#B3B3B3") +
+labs(x = "", y = "논문 수") +
+theme_classic(base_size = 14) +
+theme(
+axis.line           = element_line(color = "#404040", linewidth =  0.2),
+axis.title.y.left   = element_text(size = 16, color = "#404040", margin = margin(r = 10)),
+axis.text.y.left    = element_text(size = 16, margin = margin(l = 7)),
+axis.text.x         = element_text(size = 14)
+)
+year_plotly <- year_plot %>% plotly::ggplotly() %>%
+layout(
+font = list(size = 14),
+annotations = list(
+list(
+x = min(year_doc$PY) + (max(year_doc$PY) - min(year_doc$PY))/2.5,
+y = max(year_doc$publication_number) * 0.9,
+text = "데이터베이스: Web of Science, 1970-2025<br>총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)<br>AND (공학: \"technolog*\" 등 49개 검색어)",
+showarrow = FALSE,
+xanchor = "left",
+yanchor = "top",
+font = list(size = 14),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+),
+list(
+x = max(year_doc$PY) - 7,
+y = -12,
+text = "(Shin & McKenna, 2025)",
+showarrow = FALSE,
+xanchor = "right",
+yanchor = "top",
+font = list(size = 12),
+bgcolor = "rgba(255, 255, 255, 0.8)"
 )
 )
+) %>%
+config(responsive = TRUE)
+year_plotly
+df <- read_excel("data/wos.xlsx")
+year_doc <- df %>%
+dplyr::select(PY, UT) %>%
+group_by(PY) %>%
+dplyr::summarize(publication_number = n())
+year_plot <- year_doc %>%
+ggplot() +
+geom_col(aes(PY, publication_number), fill = "#B3B3B3") +
+labs(x = "", y = "논문 수") +
+theme_classic(base_size = 14) +
+theme(
+axis.line           = element_line(color = "#404040", linewidth =  0.2),
+axis.title.y.left   = element_text(size = 16, color = "#404040", margin = margin(r = 10)),
+axis.text.y.left    = element_text(size = 16, margin = margin(l = 7)),
+axis.text.x         = element_text(size = 14)
+)
+year_plotly <- year_plot %>% plotly::ggplotly() %>%
+layout(
+font = list(size = 14),
+annotations = list(
+list(
+x = min(year_doc$PY) + (max(year_doc$PY) - min(year_doc$PY))/2.5,
+y = max(year_doc$publication_number) * 0.9,
+text = "데이터베이스: Web of Science, 1970-2025<br>총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)<br>AND (공학: \"technolog*\" 등 49개 검색어)",
+showarrow = FALSE,
+xanchor = "left",
+yanchor = "top",
+font = list(size = 20),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+),
+list(
+x = max(year_doc$PY) - 7,
+y = -10,
+text = "(Shin & McKenna, 2025)",
+showarrow = FALSE,
+xanchor = "right",
+yanchor = "top",
+font = list(size = 12),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+)
+)
+) %>%
+config(responsive = TRUE)
+year_plotly
+df <- read_excel("data/wos.xlsx")
+year_doc <- df %>%
+dplyr::select(PY, UT) %>%
+group_by(PY) %>%
+dplyr::summarize(publication_number = n())
+year_plot <- year_doc %>%
+ggplot() +
+geom_col(aes(PY, publication_number), fill = "#B3B3B3") +
+labs(x = "", y = "논문 수") +
+theme_classic(base_size = 14) +
+theme(
+axis.line           = element_line(color = "#404040", linewidth =  0.2),
+axis.title.y.left   = element_text(size = 16, color = "#404040", margin = margin(r = 10)),
+axis.text.y.left    = element_text(size = 16, margin = margin(l = 7)),
+axis.text.x         = element_text(size = 14)
+)
+year_plotly <- year_plot %>% plotly::ggplotly() %>%
+layout(
+font = list(size = 14),
+annotations = list(
+list(
+x = min(year_doc$PY) + (max(year_doc$PY) - min(year_doc$PY))/2.5,
+y = max(year_doc$publication_number) * 0.9,
+text = "데이터베이스: Web of Science, 1970-2025<br>총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)<br>AND (공학: \"technolog*\" 등 49개 검색어)",
+showarrow = FALSE,
+xanchor = "left",
+yanchor = "top",
+font = list(size = 19),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+),
+list(
+x = max(year_doc$PY) - 7,
+y = -10,
+text = "(Shin & McKenna, 2025)",
+showarrow = FALSE,
+xanchor = "right",
+yanchor = "top",
+font = list(size = 12),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+)
+)
+) %>%
+config(responsive = TRUE)
+year_plotly
+df <- read_excel("data/wos.xlsx")
+year_doc <- df %>%
+dplyr::select(PY, UT) %>%
+group_by(PY) %>%
+dplyr::summarize(publication_number = n())
+year_plot <- year_doc %>%
+ggplot() +
+geom_col(aes(PY, publication_number), fill = "#B3B3B3") +
+labs(x = "", y = "논문 수") +
+theme_classic(base_size = 14) +
+theme(
+axis.line           = element_line(color = "#404040", linewidth =  0.2),
+axis.title.y.left   = element_text(size = 16, color = "#404040", margin = margin(r = 10)),
+axis.text.y.left    = element_text(size = 16, margin = margin(l = 7)),
+axis.text.x         = element_text(size = 14)
+)
+year_plotly <- year_plot %>% plotly::ggplotly() %>%
+layout(
+font = list(size = 14),
+annotations = list(
+list(
+x = min(year_doc$PY) + (max(year_doc$PY) - min(year_doc$PY))/2.5,
+y = max(year_doc$publication_number) * 0.9,
+text = "데이터베이스: Web of Science, 1970-2025<br>총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)<br>AND (공학: \"technolog*\" 등 49개 검색어)",
+showarrow = FALSE,
+xanchor = "left",
+yanchor = "top",
+font = list(size = 19),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+),
+list(
+x = max(year_doc$PY) - 7,
+y = -10,
+text = "(Shin & McKenna, 2025)",
+showarrow = FALSE,
+xanchor = "right",
+yanchor = "top",
+font = list(size = 12),
+bgcolor = "rgba(255, 255, 255, 0.8)"
+)
+)
+) %>%
+config(responsive = TRUE)
+year_plotly
+save(AB_plot, df, dfm_2009_earlier, dfm_2010_later, network_2009_earlier_plot, network_2009_earlier_table, network_2010_later_plot, network_2010_later_table, year_plotly, file = "data/2025ksse_data.RData")
+df <- read_excel("data/wos.xlsx")
+year_doc <- df %>%
+dplyr::select(PY, UT) %>%
+group_by(PY) %>%
+dplyr::summarize(publication_number = n())
+year_plot <- year_doc %>%
+ggplot() +
+geom_col(aes(PY, publication_number), fill = "#B3B3B3") +
+labs(x = "", y = "논문 수") +
+theme_classic(base_size = 14) +
+theme(
+axis.line           = element_line(color = "#404040", linewidth =  0.2),
+axis.title.y.left   = element_text(size = 16, color = "#404040", margin = margin(r = 10)),
+axis.text.y.left    = element_text(size = 16, margin = margin(l = 7)),
+axis.text.x         = element_text(size = 14)
+) +
+annotate("text",
+x = min(year_doc$PY) + (max(year_doc$PY) - min(year_doc$PY))/2.5,
+y = max(year_doc$publication_number) * 0.9,
+label = "데이터베이스: Web of Science, 1970-2025\n총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)\nAND (공학: \"technolog*\" 등 49개 검색어)",
+hjust = 0,
+size = 5.5,
+color = "#404040") +
+annotate("text",
+x = max(year_doc$PY) - 7,
+y = -12,
+label = "(Shin & McKenna, 2025)",
+hjust = 1,
+vjust = 0,
+size = 4.5,
+color = "#404040")
+year_plotly <- year_plot %>% plotly::ggplotly(width = 1000, height = 550)
+# Set up
+load("data/2025ksse_data.RData")
+suppressPackageStartupMessages({
+library(readxl)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(nlme)
+library(scdhlm)
+library(sjPlot)
+library(quanteda)
+library(TextAnalysisR)
+library(spacyr)
+library(stringr)
+library(widyr)
+library(tidygraph)
+library(visNetwork)
+library(RColorBrewer)
+library(htmltools)
+})
+htmltools::tags$style(HTML("
+div.dataTables_info,
+div.dataTables_paginate,
+.dataTables_length,
+.dataTables_filter {
+font-size: 20px !important;
+}
+.dataTables_paginate ul.pagination {
+flex-wrap: nowrap !important;
+white-space: nowrap !important;
+}
+"))
+# Set up
+# load("data/2025ksse_data.RData")
+suppressPackageStartupMessages({
+library(readxl)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(nlme)
+library(scdhlm)
+library(sjPlot)
+library(quanteda)
+library(TextAnalysisR)
+library(spacyr)
+library(stringr)
+library(widyr)
+library(tidygraph)
+library(visNetwork)
+library(RColorBrewer)
+library(htmltools)
+})
+htmltools::tags$style(HTML("
+div.dataTables_info,
+div.dataTables_paginate,
+.dataTables_length,
+.dataTables_filter {
+font-size: 20px !important;
+}
+.dataTables_paginate ul.pagination {
+flex-wrap: nowrap !important;
+white-space: nowrap !important;
+}
+"))
+df <- read_excel("data/wos.xlsx")
+year_doc <- df %>%
+dplyr::select(PY, UT) %>%
+group_by(PY) %>%
+dplyr::summarize(publication_number = n())
+year_plot <- year_doc %>%
+ggplot() +
+geom_col(aes(PY, publication_number), fill = "#B3B3B3") +
+labs(x = "", y = "논문 수") +
+theme_classic(base_size = 14) +
+theme(
+axis.line           = element_line(color = "#404040", linewidth =  0.2),
+axis.title.y.left   = element_text(size = 16, color = "#404040", margin = margin(r = 10)),
+axis.text.y.left    = element_text(size = 16, margin = margin(l = 7)),
+axis.text.x         = element_text(size = 14)
+) +
+annotate("text",
+x = min(year_doc$PY) + (max(year_doc$PY) - min(year_doc$PY))/2.5,
+y = max(year_doc$publication_number) * 0.9,
+label = "데이터베이스: Web of Science, 1970-2025\n총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)\nAND (공학: \"technolog*\" 등 49개 검색어)",
+hjust = 0,
+size = 5.5,
+color = "#404040") +
+annotate("text",
+x = max(year_doc$PY) - 7,
+y = -12,
+label = "(Shin & McKenna, 2025)",
+hjust = 1,
+vjust = 0,
+size = 4.5,
+color = "#404040")
+year_plotly <- year_plot %>% plotly::ggplotly(width = 1000, height = 550)
+year_plotly
+load("C:/Users/shinm/Dropbox/Myself/conference/KSSE/2025/2025ksse/docs/data/2025ksse_data.RData")

@@ -1,2 +1,0 @@
-"0",""
-"0","htmlwidgets::saveWidget(word_network_results$plot, file = ""figures/word_network_plot.html"", selfcontained = TRUE)"

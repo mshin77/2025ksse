@@ -104,15 +104,14 @@ htmltools::tags$style(HTML("
 "))
 ```
 
-
 ::::: columns
 ::: {.column width="70%"}
 -   학습장애 학생 대상 단일대상 실험설계 동향 <br>
 -   시각적 분석 특성 <br>
 -   다층 종단 모형 분석 특성 <br>
 -   학습장애 학생 수학 중재 연구
-- 시각적 분석 연구 결과
-- 베이지안 다층 모형 연구결과
+-   시각적 분석 연구 결과
+-   베이지안 다층 모형 연구결과
 :::
 
 ::: {.column width="30%"}
@@ -122,7 +121,7 @@ htmltools::tags$style(HTML("
 
 ## `단일대상 실험설계 동향`
 
-```{r, eval= FALSE}
+```{r, eval=FALSE}
 df <- read_excel("data/wos.xlsx")
 
 year_doc <- df %>%
@@ -146,18 +145,18 @@ year_plot <- year_doc %>%
            y = max(year_doc$publication_number) * 0.9,
            label = "데이터베이스: Web of Science, 1970-2025\n총 3,508편 (단일대상: \"single* case* design\" 등 18개 검색어)\nAND (공학: \"technolog*\" 등 49개 검색어)",
            hjust = 0,
-           size = 6,
+           size = 5.5,
            color = "#404040") +
   annotate("text",
            x = max(year_doc$PY) - 7,
            y = -12,
-           label = "(Shin & McKenna, 2025) 자료",
+           label = "(Shin & McKenna, 2025)",
            hjust = 1,
            vjust = 0,
-           size = 4,
+           size = 4.5,
            color = "#404040")
 
-year_plotly <- year_plot %>% plotly::ggplotly() 
+year_plotly <- year_plot %>% plotly::ggplotly(width = 1000, height = 550)
 ```
 
 ```{r, echo = FALSE}
@@ -168,7 +167,6 @@ year_plotly
 
 ::::: columns
 ::: {.column width="60%"}
-
 ```{r, echo=FALSE, results='asis', eval=FALSE}
 # 단어 네트워크 분석에 필요한 함수 정의
 word_correlation_network <- function(dfm_object,
@@ -634,9 +632,7 @@ network_2010_later_table
 
 -   행동의 예측, 검증, 재현 과정을 통하여 내적 타당도를 확인
 
--   그래프 데이터가 수집되어야 하며, 시각적인 분석이 이루어짐
-
--   연구설계에 따라서 기초선, 중재, 유지, 일반화 구간 등 설정
+-   그래프 데이터가 수집 / 기초선, 중재, 유지, 일반화 구간 등 설정
 
 ```{r, eval=FALSE}
 AB <- read_csv("data/ABAB.csv", show_col_types = FALSE)
@@ -683,15 +679,15 @@ AB.plot <-  AB %>%
     annotate("rect", xmin = 3.8, xmax = 8.3, ymin = 0, ymax = 20, alpha = .2) +
     annotate("rect", xmin = 8.8, xmax = 12.3, ymin = 60, ymax = 90, alpha = .2) 
 
-AB_plot <- AB.plot %>% ggplotly(height = 400) %>% layout(dragmode = "select")
+AB_plot <- AB.plot %>% ggplotly(height = 350) %>% layout(dragmode = "select")
 ```
 
 ```{r, echo=FALSE}
 AB_plot
 ```
 
-::: {style="font-size: 0.8em; "}
-(신미경, 2022) 자료
+::: {style="font-size: 0.7em;"}
+(신미경, 2022)
 :::
 
 ## `다층모형을 통하여 종단자료 분석`
@@ -710,11 +706,12 @@ AB_plot
 [<i class="fas fa-code"></i>
 Code](https://mshin77.github.io/multilevel-SCD/){.hover-effect
 style="color: #6D6D6D; text-decoration: none;"}
-     
-::: {style="font-size: 0.8em; line-height: 1;"}
-Shin, M., Hart, S. L., & Simmons, M. (2024). Meta-analysis of single-case design research: Application of multilevel modeling. *School Psychology, 39*(6), 625-635. <https://doi.org/10.1037/spq0000637>
-:::
 
+::: {style="font-size: 0.8em; line-height: 1;"}
+Shin, M., Hart, S. L., & Simmons, M. (2024). Meta-analysis of
+single-case design research: Application of multilevel modeling. *School
+Psychology, 39*(6), 625-635. <https://doi.org/10.1037/spq0000637>
+:::
 
 ## `비연속 분할 회귀 모형`
 
@@ -724,23 +721,19 @@ Shin, M., Hart, S. L., & Simmons, M. (2024). Meta-analysis of single-case design
 
 ![](figures/piecewise.png){fig-align="center" width="662"}
 
-::: {style="font-size: 0.8em; "}
+::: {style="font-size: 0.7em;"}
 (Wilbert, 2025)
 :::
 
 ## `학습장애 학생 수학 중재 연구`
 
--   
+1.  `테크놀로지 보조 교수 및 교사의 의사소통 촉진`은 중학교 학습장애
+    학생의 `분수 곱셈 시각화` 및 `문장제 문제풀이` 향상에 어떠한 효과를
+    미치는가? (시각적 분석)
 
-    1.  `테크놀로지 보조 교수 및 교사의 의사소통 촉진`은 중학교 학습장애
-        학생의 `분수 곱셈 시각화` 및 `문장제 문제풀이` 향상에 어떠한
-        효과를 미치는가? (시각적 분석)
-
--   
-
-    2.  `문장제 문제 질문 유형`(시각화 대 문제해결)은 `구간 간`(기초선
-        대 중재, 중재 대 유지) 행동 변화에 어떠한 `조절 효과`를
-        보이는가? (베이지안 다층 모형)
+2.  `문장제 문제 질문 유형`(시각화 대 문제해결)은 `구간 간`(기초선 대
+    중재, 중재 대 유지) 행동 변화에 어떠한 `조절 효과`를 보이는가?
+    (베이지안 다층 모형)
 
 ::: {style="font-size: 0.8em; line-height: 1;"}
 Shin, M., & Park, J. (2024). Technology-assisted instruction with
@@ -842,10 +835,12 @@ $$
 -   $T_{1 j l}, T_{2 j l}, T_{3 j l}=$ 기초선, 중재, 유지 구간 시작점
 -   $\left(t>T_{2 j l}\right),\left(t>T_{3 j l}\right)=$ 거짓(0) 또는
     참(1)
--   $\beta_{0 j l} \sim \beta_{5 j l}$: 기초선 대 중재, 중재 대 유지 수준 및 추세 변화
+-   $\beta_{0 j l} \sim \beta_{5 j l}$: 기초선 대 중재, 중재 대 유지
+    수준 및 추세 변화
 -   학습장애 학생들은 분수 곱셈 문장제 문제해결 과제에서 시각화
-    문제에서보다 더 높은 유지 효과를 나타냈음 
-- 수준(logit = 2.6) 및 추세(logit = 0.22) 변화로 이러한 중재 효과를 재확인
+    문제에서보다 더 높은 유지 효과를 나타냈음
+-   수준(logit = 2.6) 및 추세(logit = 0.22) 변화로 이러한 중재 효과를
+    재확인
 
 ```{r, echo=FALSE}
 save(AB_plot, df, dfm_2009_earlier, dfm_2010_later, network_2009_earlier_plot, network_2009_earlier_table, network_2010_later_plot, network_2010_later_table, year_plotly, file = "data/2025ksse_data.RData")

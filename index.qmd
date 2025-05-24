@@ -799,7 +799,7 @@ style="color: #6D6D6D; text-decoration: none;"}
 :::
 
 ::: {.column width="50%"}
-![](figures/학생.png){fig-align="center" width="546"}
+![](figures/student_info.png){fig-align="center" width="546"}
 :::
 :::::
 
@@ -811,7 +811,7 @@ style="color: #6D6D6D; text-decoration: none;"}
 
 ::::: columns
 ::: {.column width="60%"}
-![](figures/그래프2.png){fig-align="center" width="662"}
+![](figures/graph.png){fig-align="center" width="662"}
 :::
 
 ::: {.column width="40%"}
